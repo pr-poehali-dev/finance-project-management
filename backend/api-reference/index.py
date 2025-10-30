@@ -52,18 +52,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             companies = [dict(row) for row in cur.fetchall()]
             result = []
             for company in companies:
-                cur.execute(f"SELECT COUNT(*) as total FROM projects WHERE company_id = {company['id']}")
-                total_projects = cur.fetchone()['total']
-                
-                cur.execute(f"SELECT COUNT(*) as active FROM projects WHERE company_id = {company['id']} AND status = 'active'")
-                active_projects = cur.fetchone()['active']
-                
-                cur.execute(f"SELECT COALESCE(SUM(budget), 0) as total_budget, COALESCE(SUM(profit), 0) as total_profit FROM projects WHERE company_id = {company['id']}")
-                finances = cur.fetchone()
-                
-                cur.execute(f"SELECT COALESCE(SUM(amount), 0) as pending FROM payments WHERE project_id IN (SELECT id FROM projects WHERE company_id = {company['id']}) AND status = 'pending'")
-                pending = cur.fetchone()['pending']
-                
                 result.append({
                     'id': company['id'],
                     'name': company['name'],
@@ -79,11 +67,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'contact_person': company['contact_person'],
                     'email': company['email'],
                     'phone': company['phone'],
-                    'total_projects': int(total_projects),
-                    'active_projects': int(active_projects),
-                    'total_budget': float(finances['total_budget']),
-                    'total_profit': float(finances['total_profit']),
-                    'pending_payments': float(pending)
+                    'total_projects': 0,
+                    'active_projects': 0,
+                    'total_budget': 0,
+                    'total_profit': 0,
+                    'pending_payments': 0
                 })
         elif action == 'company-projects':
             company_id = params.get('company_id', '')
@@ -96,8 +84,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'body': json.dumps({'error': 'company_id required'}),
                     'isBase64Encoded': False
                 }
-            cur.execute(f"SELECT id, name, status, COALESCE(budget, 0) as budget, COALESCE(profit, 0) as profit, start_date, end_date FROM projects WHERE company_id = {company_id} ORDER BY start_date DESC")
-            result = [dict(row) for row in cur.fetchall()]
+            result = []
         elif action == 'items':
             cur.execute('SELECT id, name, description, type, unit, COALESCE(default_price, 0) as default_price FROM items ORDER BY type, name')
             rows = cur.fetchall()
