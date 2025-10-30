@@ -48,29 +48,26 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     {"id": 3, "name": "СтройПроект", "contact_person": "Иванов В.В.", "email": "office@stroyproject.ru", "phone": "+7 495 555-66-77"}
                 ]
         elif action == 'companies-with-stats':
-            try:
-                cur.execute("""
-                    SELECT 
-                        c.id,
-                        c.name,
-                        COALESCE(c.inn, '') as inn,
-                        COALESCE(c.contact_person, '') as contact_person,
-                        COALESCE(c.email, '') as email,
-                        COALESCE(c.phone, '') as phone,
-                        COUNT(DISTINCT p.id) as total_projects,
-                        COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'active') as active_projects,
-                        COALESCE(SUM(p.budget), 0) as total_budget,
-                        COALESCE(SUM(p.profit), 0) as total_profit,
-                        COALESCE(SUM(pay.amount) FILTER (WHERE pay.status = 'pending'), 0) as pending_payments
-                    FROM companies c
-                    LEFT JOIN projects p ON p.company_id = c.id
-                    LEFT JOIN payments pay ON pay.project_id = p.id
-                    GROUP BY c.id, c.name, c.inn, c.contact_person, c.email, c.phone
-                    ORDER BY c.name
-                """)
-                result = [dict(row) for row in cur.fetchall()]
-            except Exception as e:
-                result = []
+            cur.execute("""
+                SELECT 
+                    c.id::text,
+                    c.name::text,
+                    COALESCE(c.inn, '')::text as inn,
+                    COALESCE(c.contact_person, '')::text as contact_person,
+                    COALESCE(c.email, '')::text as email,
+                    COALESCE(c.phone, '')::text as phone,
+                    CAST(COUNT(DISTINCT p.id) AS INTEGER) as total_projects,
+                    CAST(COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id ELSE NULL END) AS INTEGER) as active_projects,
+                    CAST(COALESCE(SUM(p.budget), 0) AS NUMERIC(15,2)) as total_budget,
+                    CAST(COALESCE(SUM(p.profit), 0) AS NUMERIC(15,2)) as total_profit,
+                    CAST(COALESCE(SUM(CASE WHEN pay.status = 'pending' THEN pay.amount ELSE 0 END), 0) AS NUMERIC(15,2)) as pending_payments
+                FROM companies c
+                LEFT JOIN projects p ON p.company_id = c.id
+                LEFT JOIN payments pay ON pay.project_id = p.id
+                GROUP BY c.id, c.name, c.inn, c.contact_person, c.email, c.phone
+                ORDER BY c.name
+            """)
+            result = [dict(row) for row in cur.fetchall()]
         elif action == 'items':
             cur.execute('SELECT id, name, description, type, unit, COALESCE(default_price, 0) as default_price FROM items ORDER BY type, name')
             rows = cur.fetchall()
@@ -101,8 +98,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     if method == 'POST' and action == 'create-company':
         body = json.loads(event.get('body', '{}'))
-        name = body.get('name')
-        inn = body.get('inn')
+        name = body.get('name', '').replace("'", "''")
+        inn = body.get('inn', '').replace("'", "''")
         
         if not name or not inn:
             cur.close()
@@ -114,27 +111,27 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
         
-        cur.execute("""
+        kpp = body.get('kpp', '').replace("'", "''")
+        ogrn = body.get('ogrn', '').replace("'", "''")
+        legal_address = body.get('legal_address', '').replace("'", "''")
+        actual_address = body.get('actual_address', '').replace("'", "''")
+        bank_name = body.get('bank_name', '').replace("'", "''")
+        bik = body.get('bik', '').replace("'", "''")
+        correspondent_account = body.get('correspondent_account', '').replace("'", "''")
+        account_number = body.get('account_number', '').replace("'", "''")
+        contact_person = body.get('contact_person', '').replace("'", "''")
+        phone = body.get('phone', '').replace("'", "''")
+        email = body.get('email', '').replace("'", "''")
+        
+        cur.execute(f"""
             INSERT INTO companies 
             (name, inn, kpp, ogrn, legal_address, actual_address, bank_name, bik, 
              correspondent_account, account_number, contact_person, phone, email)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES ('{name}', '{inn}', '{kpp}', '{ogrn}', '{legal_address}', '{actual_address}', 
+                    '{bank_name}', '{bik}', '{correspondent_account}', '{account_number}', 
+                    '{contact_person}', '{phone}', '{email}')
             RETURNING id
-        """, (
-            name,
-            inn,
-            body.get('kpp', ''),
-            body.get('ogrn', ''),
-            body.get('legal_address', ''),
-            body.get('actual_address', ''),
-            body.get('bank_name', ''),
-            body.get('bik', ''),
-            body.get('correspondent_account', ''),
-            body.get('account_number', ''),
-            body.get('contact_person', ''),
-            body.get('phone', ''),
-            body.get('email', '')
-        ))
+        """)
         company_id = cur.fetchone()['id']
         conn.commit()
         
