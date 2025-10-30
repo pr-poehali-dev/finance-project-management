@@ -30,6 +30,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     conn = psycopg2.connect(dsn)
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
+    cur.execute("SELECT current_schema()")
+    schema = cur.fetchone()['current_schema']
+    
     params = event.get('queryStringParameters', {}) or {}
     action = params.get('action', '')
     
@@ -45,26 +48,29 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     {"id": 3, "name": "СтройПроект", "contact_person": "Иванов В.В.", "email": "office@stroyproject.ru", "phone": "+7 495 555-66-77"}
                 ]
         elif action == 'companies-with-stats':
-            cur.execute("""
-                SELECT 
-                    c.id,
-                    c.name,
-                    c.inn,
-                    c.contact_person,
-                    c.email,
-                    c.phone,
-                    COUNT(DISTINCT p.id) as total_projects,
-                    COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'active') as active_projects,
-                    COALESCE(SUM(p.budget), 0) as total_budget,
-                    COALESCE(SUM(p.profit), 0) as total_profit,
-                    COALESCE(SUM(pay.amount) FILTER (WHERE pay.status = 'pending'), 0) as pending_payments
-                FROM companies c
-                LEFT JOIN projects p ON p.company_id = c.id
-                LEFT JOIN payments pay ON pay.project_id = p.id
-                GROUP BY c.id
-                ORDER BY c.name
-            """)
-            result = [dict(row) for row in cur.fetchall()]
+            try:
+                cur.execute("""
+                    SELECT 
+                        c.id,
+                        c.name,
+                        COALESCE(c.inn, '') as inn,
+                        COALESCE(c.contact_person, '') as contact_person,
+                        COALESCE(c.email, '') as email,
+                        COALESCE(c.phone, '') as phone,
+                        COUNT(DISTINCT p.id) as total_projects,
+                        COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'active') as active_projects,
+                        COALESCE(SUM(p.budget), 0) as total_budget,
+                        COALESCE(SUM(p.profit), 0) as total_profit,
+                        COALESCE(SUM(pay.amount) FILTER (WHERE pay.status = 'pending'), 0) as pending_payments
+                    FROM companies c
+                    LEFT JOIN projects p ON p.company_id = c.id
+                    LEFT JOIN payments pay ON pay.project_id = p.id
+                    GROUP BY c.id, c.name, c.inn, c.contact_person, c.email, c.phone
+                    ORDER BY c.name
+                """)
+                result = [dict(row) for row in cur.fetchall()]
+            except Exception as e:
+                result = []
         elif action == 'items':
             cur.execute('SELECT id, name, description, type, unit, COALESCE(default_price, 0) as default_price FROM items ORDER BY type, name')
             rows = cur.fetchall()
