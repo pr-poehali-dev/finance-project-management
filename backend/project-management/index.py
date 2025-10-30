@@ -103,7 +103,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 f'''INSERT INTO projects (company_id, title, description, budget, status, start_date)
                    VALUES ({company_id}, {title}, {description}, {budget}, {status}, {start_date}) RETURNING id'''
             )
-            project_id = cur.fetchone()[0]
+            project_id = cur.fetchone()['id']
             
             if body_data.get('items'):
                 for item in body_data['items']:
@@ -133,13 +133,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             title = escape_sql(body_data['title'])
             description = escape_sql(body_data.get('description', ''))
             status = escape_sql(body_data.get('status', 'draft'))
-            estimated_hours = float(body_data.get('estimated_hours', 0))
+            estimated_hours_str = body_data.get('estimated_hours', '0')
+            estimated_hours = float(estimated_hours_str) if estimated_hours_str else 0
             
             cur.execute(
                 f'''INSERT INTO estimates (company_id, title, description, status, estimated_hours)
                    VALUES ({company_id}, {title}, {description}, {status}, {estimated_hours}) RETURNING id'''
             )
-            estimate_id = cur.fetchone()[0]
+            estimate_id = cur.fetchone()['id']
             
             if body_data.get('items'):
                 for item in body_data['items']:
@@ -167,7 +168,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 f'''INSERT INTO payments (project_id, contractor_id, type, amount, description, payment_date, status)
                    VALUES ({project_id}, {contractor_id}, {payment_type}, {amount}, {description}, {payment_date}, {status}) RETURNING id'''
             )
-            payment_id = cur.fetchone()[0]
+            payment_id = cur.fetchone()['id']
             
             conn.commit()
             result = {'id': payment_id, 'message': 'Payment created successfully'}
@@ -183,7 +184,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 f'''INSERT INTO items (name, description, type, unit, default_price)
                    VALUES ({name}, {description}, {item_type}, {unit}, {default_price}) RETURNING id'''
             )
-            item_id = cur.fetchone()[0]
+            item_id = cur.fetchone()['id']
             
             conn.commit()
             result = {'id': item_id, 'message': 'Item created successfully'}

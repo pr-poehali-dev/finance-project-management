@@ -420,15 +420,26 @@ const Index = () => {
                       />
                     </div>
 
-                    <div className="pt-2 border-t flex items-center justify-between">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Прибыль: </span>
-                        <span className="font-bold text-accent">{formatCurrency(project.profit)}</span>
+                    <div className="pt-2 border-t space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Прибыль: </span>
+                          <span className="font-bold text-accent">{formatCurrency(project.profit)}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Icon name="CreditCard" size={14} />
+                          {project.payment_count}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Icon name="CreditCard" size={14} />
-                        {project.payment_count}
-                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setPaymentFormOpen(true)}
+                      >
+                        <Icon name="Plus" size={14} className="mr-2" />
+                        Добавить платеж
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -503,9 +514,9 @@ const Index = () => {
                 <h2 className="text-2xl font-bold">Подрядчики</h2>
                 <p className="text-muted-foreground">База подрядчиков и специалистов</p>
               </div>
-              <Button>
+              <Button onClick={() => setItemFormOpen(true)}>
                 <Icon name="Plus" size={16} className="mr-2" />
-                Добавить подрядчика
+                Добавить услугу/товар
               </Button>
             </div>
 
