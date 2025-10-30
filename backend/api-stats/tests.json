@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get dashboard statistics",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+
+      "bodyMatcher": "partial"
+    }
+  ]
+}

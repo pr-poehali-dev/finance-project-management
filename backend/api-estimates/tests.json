@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Get all estimates",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
