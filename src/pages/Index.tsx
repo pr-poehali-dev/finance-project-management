@@ -16,12 +16,14 @@ import EstimateForm from '@/components/forms/EstimateForm';
 import PaymentForm from '@/components/forms/PaymentForm';
 import ItemForm from '@/components/forms/ItemForm';
 import ContractorForm from '@/components/forms/ContractorForm';
+import CompanyForm from '@/components/forms/CompanyForm';
 
 const FUNCTIONS = {
   stats: 'https://functions.poehali.dev/b27021b6-5f87-44ed-9fde-234aaf974da4',
   projects: 'https://functions.poehali.dev/631d6a6d-9657-43fe-bef1-0a38e1e85d68',
   estimates: 'https://functions.poehali.dev/8dc3fcd1-7649-49e4-a36e-2bffbcc4b25d',
   contractors: 'https://functions.poehali.dev/850a0fed-8a2e-453d-88a4-6a527ec30caa',
+  companies: 'https://functions.poehali.dev/3dbe8ad4-c10b-4750-bf0f-aa6da4085348',
 };
 
 interface DashboardStats {
@@ -94,28 +96,33 @@ const Index = () => {
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
   const [itemFormOpen, setItemFormOpen] = useState(false);
   const [contractorFormOpen, setContractorFormOpen] = useState(false);
+  const [companyFormOpen, setCompanyFormOpen] = useState(false);
   const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, projectsRes, estimatesRes, contractorsRes] = await Promise.all([
+        const [statsRes, projectsRes, estimatesRes, contractorsRes, companiesRes] = await Promise.all([
           fetch(FUNCTIONS.stats),
           fetch(FUNCTIONS.projects),
           fetch(FUNCTIONS.estimates),
           fetch(FUNCTIONS.contractors),
+          fetch(`${FUNCTIONS.companies}?action=companies-with-stats`),
         ]);
 
         const statsData = await statsRes.json();
         const projectsData = await projectsRes.json();
         const estimatesData = await estimatesRes.json();
         const contractorsData = await contractorsRes.json();
+        const companiesData = await companiesRes.json();
 
         setStats(statsData);
         setProjects(projectsData);
         setEstimates(estimatesData);
         setContractors(contractorsData);
+        setCompanies(Array.isArray(companiesData) ? companiesData : []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -129,22 +136,25 @@ const Index = () => {
   const handleFormSuccess = () => {
     const fetchData = async () => {
       try {
-        const [statsRes, projectsRes, estimatesRes, contractorsRes] = await Promise.all([
+        const [statsRes, projectsRes, estimatesRes, contractorsRes, companiesRes] = await Promise.all([
           fetch(FUNCTIONS.stats),
           fetch(FUNCTIONS.projects),
           fetch(FUNCTIONS.estimates),
           fetch(FUNCTIONS.contractors),
+          fetch(`${FUNCTIONS.companies}?action=companies-with-stats`),
         ]);
 
         const statsData = await statsRes.json();
         const projectsData = await projectsRes.json();
         const estimatesData = await estimatesRes.json();
         const contractorsData = await contractorsRes.json();
+        const companiesData = await companiesRes.json();
 
         setStats(statsData);
         setProjects(projectsData);
         setEstimates(estimatesData);
         setContractors(contractorsData);
+        setCompanies(Array.isArray(companiesData) ? companiesData : []);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -212,7 +222,7 @@ const Index = () => {
 
       <div className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard" className="gap-2">
               <Icon name="LayoutDashboard" size={16} />
               <span className="hidden sm:inline">Дашборд</span>
@@ -228,6 +238,10 @@ const Index = () => {
             <TabsTrigger value="contractors" className="gap-2">
               <Icon name="Users" size={16} />
               <span className="hidden sm:inline">Подрядчики</span>
+            </TabsTrigger>
+            <TabsTrigger value="clients" className="gap-2">
+              <Icon name="Building2" size={16} />
+              <span className="hidden sm:inline">Клиенты</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <Icon name="TrendingUp" size={16} />
@@ -575,6 +589,74 @@ const Index = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="clients" className="space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Клиенты</h2>
+                <p className="text-muted-foreground">База клиентов и организаций</p>
+              </div>
+              <Button onClick={() => setCompanyFormOpen(true)}>
+                <Icon name="Plus" size={16} className="mr-2" />
+                Добавить организацию
+              </Button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {companies.map((company: any) => (
+                <Card key={company.id} className="hover-scale">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Icon name="Building2" size={24} className="text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{company.name}</CardTitle>
+                          <CardDescription>ИНН: {company.inn}</CardDescription>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Проектов</div>
+                        <div className="font-medium text-lg">{company.total_projects || 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Активных</div>
+                        <div className="font-medium text-lg text-green-600">{company.active_projects || 0}</div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Общий оборот:</span>
+                        <span className="font-bold text-primary">{formatCurrency(company.total_budget || 0)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Прибыль:</span>
+                        <span className="font-bold text-accent">{formatCurrency(company.total_profit || 0)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Остаток выплат:</span>
+                        <span className="font-bold text-orange-600">{formatCurrency(company.pending_payments || 0)}</span>
+                      </div>
+                    </div>
+
+                    {company.contact_person && (
+                      <div className="pt-2 border-t text-sm">
+                        <div className="text-muted-foreground">Контакт:</div>
+                        <div className="font-medium">{company.contact_person}</div>
+                        {company.phone && <div className="text-xs text-muted-foreground">{company.phone}</div>}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
           <TabsContent value="analytics" className="space-y-4 animate-fade-in">
             <div>
               <h2 className="text-2xl font-bold">Аналитика</h2>
@@ -683,6 +765,11 @@ const Index = () => {
       <ContractorForm 
         open={contractorFormOpen} 
         onOpenChange={setContractorFormOpen} 
+        onSuccess={handleFormSuccess} 
+      />
+      <CompanyForm 
+        open={companyFormOpen} 
+        onOpenChange={setCompanyFormOpen} 
         onSuccess={handleFormSuccess} 
       />
     </div>

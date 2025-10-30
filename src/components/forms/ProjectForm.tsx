@@ -42,6 +42,7 @@ interface ProjectContractor {
   contractor_id: number;
   role: string;
   hourly_rate: number;
+  fixed_amount?: number;
 }
 
 interface ProjectFormProps {
@@ -106,9 +107,9 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
     }
   };
 
-  const updateItem = (index: number, field: keyof ProjectItem, value: number) => {
+  const updateItem = (index: number, updates: Partial<ProjectItem>) => {
     const updated = [...projectItems];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], ...updates };
     setProjectItems(updated);
   };
 
@@ -127,14 +128,14 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
       };
       setProjectContractors([
         ...projectContractors,
-        { contractor_id: contractor.id, role: roleMap[contractor.specialization] || 'Дизайн', hourly_rate: Number(contractor.hourly_rate) },
+        { contractor_id: contractor.id, role: roleMap[contractor.specialization] || 'Дизайн', hourly_rate: Number(contractor.hourly_rate), fixed_amount: 0 },
       ]);
     }
   };
 
-  const updateContractor = (index: number, field: keyof ProjectContractor, value: number | string) => {
+  const updateContractor = (index: number, updates: Partial<ProjectContractor>) => {
     const updated = [...projectContractors];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], ...updates };
     setProjectContractors(updated);
   };
 
@@ -288,8 +289,10 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
                       onValueChange={(value) => {
                         const selectedItem = items.find((i) => i.id === Number(value));
                         if (selectedItem) {
-                          updateItem(index, 'item_id', Number(value));
-                          updateItem(index, 'unit_price', Number(selectedItem.default_price));
+                          updateItem(index, {
+                            item_id: Number(value),
+                            unit_price: Number(selectedItem.default_price)
+                          });
                         }
                       }}
                     >
@@ -311,7 +314,7 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
                     <Input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+                      onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
                       min="0.01"
                       step="0.01"
                     />
@@ -322,7 +325,7 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
                     <Input
                       type="number"
                       value={item.unit_price}
-                      onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
+                      onChange={(e) => updateItem(index, { unit_price: Number(e.target.value) })}
                       min="0"
                     />
                   </div>
@@ -369,8 +372,10 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
                       onValueChange={(value) => {
                         const contractor = contractors.find((c) => c.id === Number(value));
                         if (contractor) {
-                          updateContractor(index, 'contractor_id', Number(value));
-                          updateContractor(index, 'hourly_rate', Number(contractor.hourly_rate));
+                          updateContractor(index, {
+                            contractor_id: Number(value),
+                            hourly_rate: Number(contractor.hourly_rate)
+                          });
                         }
                       }}
                     >
@@ -389,7 +394,7 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
 
                   <div className="w-40 space-y-2">
                     <Label>Роль</Label>
-                    <Select value={pc.role} onValueChange={(value) => updateContractor(index, 'role', value)}>
+                    <Select value={pc.role} onValueChange={(value) => updateContractor(index, { role: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -407,7 +412,18 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
                     <Input
                       type="number"
                       value={pc.hourly_rate}
-                      onChange={(e) => updateContractor(index, 'hourly_rate', Number(e.target.value))}
+                      onChange={(e) => updateContractor(index, { hourly_rate: Number(e.target.value) })}
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="w-32 space-y-2">
+                    <Label>Сумма за проект</Label>
+                    <Input
+                      type="number"
+                      value={pc.fixed_amount || 0}
+                      onChange={(e) => updateContractor(index, { fixed_amount: Number(e.target.value) })}
+                      placeholder="0"
                       min="0"
                     />
                   </div>
