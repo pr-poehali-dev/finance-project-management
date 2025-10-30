@@ -48,23 +48,56 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     {"id": 3, "name": "СтройПроект", "contact_person": "Иванов В.В.", "email": "office@stroyproject.ru", "phone": "+7 495 555-66-77"}
                 ]
         elif action == 'companies-with-stats':
-            cur.execute('SELECT id, name, COALESCE(inn, \'\') as inn, COALESCE(contact_person, \'\') as contact_person, COALESCE(email, \'\') as email, COALESCE(phone, \'\') as phone FROM companies ORDER BY name')
+            cur.execute('SELECT id, name, COALESCE(inn, \'\') as inn, COALESCE(kpp, \'\') as kpp, COALESCE(ogrn, \'\') as ogrn, COALESCE(legal_address, \'\') as legal_address, COALESCE(actual_address, \'\') as actual_address, COALESCE(bank_name, \'\') as bank_name, COALESCE(bik, \'\') as bik, COALESCE(correspondent_account, \'\') as correspondent_account, COALESCE(account_number, \'\') as account_number, COALESCE(contact_person, \'\') as contact_person, COALESCE(email, \'\') as email, COALESCE(phone, \'\') as phone FROM companies ORDER BY name')
             companies = [dict(row) for row in cur.fetchall()]
             result = []
             for company in companies:
+                cur.execute(f"SELECT COUNT(*) as total FROM projects WHERE company_id = {company['id']}")
+                total_projects = cur.fetchone()['total']
+                
+                cur.execute(f"SELECT COUNT(*) as active FROM projects WHERE company_id = {company['id']} AND status = 'active'")
+                active_projects = cur.fetchone()['active']
+                
+                cur.execute(f"SELECT COALESCE(SUM(budget), 0) as total_budget, COALESCE(SUM(profit), 0) as total_profit FROM projects WHERE company_id = {company['id']}")
+                finances = cur.fetchone()
+                
+                cur.execute(f"SELECT COALESCE(SUM(amount), 0) as pending FROM payments WHERE project_id IN (SELECT id FROM projects WHERE company_id = {company['id']}) AND status = 'pending'")
+                pending = cur.fetchone()['pending']
+                
                 result.append({
                     'id': company['id'],
                     'name': company['name'],
                     'inn': company['inn'],
+                    'kpp': company['kpp'],
+                    'ogrn': company['ogrn'],
+                    'legal_address': company['legal_address'],
+                    'actual_address': company['actual_address'],
+                    'bank_name': company['bank_name'],
+                    'bik': company['bik'],
+                    'correspondent_account': company['correspondent_account'],
+                    'account_number': company['account_number'],
                     'contact_person': company['contact_person'],
                     'email': company['email'],
                     'phone': company['phone'],
-                    'total_projects': 0,
-                    'active_projects': 0,
-                    'total_budget': 0,
-                    'total_profit': 0,
-                    'pending_payments': 0
+                    'total_projects': int(total_projects),
+                    'active_projects': int(active_projects),
+                    'total_budget': float(finances['total_budget']),
+                    'total_profit': float(finances['total_profit']),
+                    'pending_payments': float(pending)
                 })
+        elif action == 'company-projects':
+            company_id = params.get('company_id', '')
+            if not company_id:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'company_id required'}),
+                    'isBase64Encoded': False
+                }
+            cur.execute(f"SELECT id, name, status, COALESCE(budget, 0) as budget, COALESCE(profit, 0) as profit, start_date, end_date FROM projects WHERE company_id = {company_id} ORDER BY start_date DESC")
+            result = [dict(row) for row in cur.fetchall()]
         elif action == 'items':
             cur.execute('SELECT id, name, description, type, unit, COALESCE(default_price, 0) as default_price FROM items ORDER BY type, name')
             rows = cur.fetchall()

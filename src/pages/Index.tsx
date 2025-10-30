@@ -6,6 +6,13 @@ import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -100,6 +107,10 @@ const Index = () => {
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [companyProjects, setCompanyProjects] = useState<any[]>([]);
+  const [showCompanyDetails, setShowCompanyDetails] = useState(false);
+  const [showCompanyRequisites, setShowCompanyRequisites] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -162,6 +173,19 @@ const Index = () => {
     fetchData();
   };
 
+  const handleCompanyClick = async (company: any) => {
+    setSelectedCompany(company);
+    setShowCompanyDetails(true);
+    try {
+      const response = await fetch(`${FUNCTIONS.companies}?action=company-projects&company_id=${company.id}`);
+      const projectsData = await response.json();
+      setCompanyProjects(Array.isArray(projectsData) ? projectsData : []);
+    } catch (error) {
+      console.error('Error fetching company projects:', error);
+      setCompanyProjects([]);
+    }
+  };
+
   const formatCurrency = (value: string | number) => {
     return new Intl.NumberFormat('ru-RU', {
       style: 'currency',
@@ -172,6 +196,7 @@ const Index = () => {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+      active: { label: 'Активный', variant: 'default' },
       in_progress: { label: 'В работе', variant: 'default' },
       completed: { label: 'Завершен', variant: 'secondary' },
       planning: { label: 'Планирование', variant: 'outline' },
@@ -651,6 +676,29 @@ const Index = () => {
                         {company.phone && <div className="text-xs text-muted-foreground">{company.phone}</div>}
                       </div>
                     )}
+
+                    <div className="pt-2 border-t flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => handleCompanyClick(company)}
+                      >
+                        <Icon name="FolderOpen" size={14} className="mr-2" />
+                        Проекты
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedCompany(company);
+                          setShowCompanyRequisites(true);
+                        }}
+                      >
+                        <Icon name="FileText" size={14} className="mr-2" />
+                        Реквизиты
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -772,6 +820,155 @@ const Index = () => {
         onOpenChange={setCompanyFormOpen} 
         onSuccess={handleFormSuccess} 
       />
+
+      <Dialog open={showCompanyDetails} onOpenChange={setShowCompanyDetails}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Icon name="Building2" size={24} />
+              Проекты: {selectedCompany?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Список всех проектов организации
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {companyProjects.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Icon name="FolderOpen" size={48} className="mx-auto mb-2 opacity-50" />
+                <p>Проектов пока нет</p>
+              </div>
+            ) : (
+              companyProjects.map((project: any) => (
+                <Card key={project.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle>{project.name}</CardTitle>
+                        <CardDescription>
+                          {project.start_date && `Старт: ${new Date(project.start_date).toLocaleDateString('ru-RU')}`}
+                          {project.end_date && ` • Завершение: ${new Date(project.end_date).toLocaleDateString('ru-RU')}`}
+                        </CardDescription>
+                      </div>
+                      {getStatusBadge(project.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Бюджет</div>
+                        <div className="text-lg font-bold">{formatCurrency(project.budget)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Прибыль</div>
+                        <div className="text-lg font-bold text-accent">{formatCurrency(project.profit)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Рентабельность</div>
+                        <div className="text-lg font-bold text-secondary">
+                          {project.budget > 0 ? ((project.profit / project.budget) * 100).toFixed(1) : 0}%
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCompanyRequisites} onOpenChange={setShowCompanyRequisites}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Icon name="FileText" size={24} />
+              Реквизиты: {selectedCompany?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Полная информация об организации
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">ИНН</div>
+                <div className="font-medium">{selectedCompany?.inn || '—'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">КПП</div>
+                <div className="font-medium">{selectedCompany?.kpp || '—'}</div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-sm font-medium text-muted-foreground mb-1">ОГРН</div>
+                <div className="font-medium">{selectedCompany?.ogrn || '—'}</div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3">Адреса</h4>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Юридический адрес</div>
+                  <div>{selectedCompany?.legal_address || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Фактический адрес</div>
+                  <div>{selectedCompany?.actual_address || '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3">Банковские реквизиты</h4>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Банк</div>
+                  <div>{selectedCompany?.bank_name || '—'}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">БИК</div>
+                    <div className="font-mono">{selectedCompany?.bik || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Корр. счёт</div>
+                    <div className="font-mono">{selectedCompany?.correspondent_account || '—'}</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Расчётный счёт</div>
+                  <div className="font-mono">{selectedCompany?.account_number || '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3">Контактная информация</h4>
+              <div className="space-y-2">
+                {selectedCompany?.contact_person && (
+                  <div className="flex items-center gap-2">
+                    <Icon name="User" size={16} className="text-muted-foreground" />
+                    <span>{selectedCompany.contact_person}</span>
+                  </div>
+                )}
+                {selectedCompany?.email && (
+                  <div className="flex items-center gap-2">
+                    <Icon name="Mail" size={16} className="text-muted-foreground" />
+                    <span>{selectedCompany.email}</span>
+                  </div>
+                )}
+                {selectedCompany?.phone && (
+                  <div className="flex items-center gap-2">
+                    <Icon name="Phone" size={16} className="text-muted-foreground" />
+                    <span>{selectedCompany.phone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
