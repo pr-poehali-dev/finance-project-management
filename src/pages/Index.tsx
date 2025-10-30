@@ -11,6 +11,10 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import ProjectForm from '@/components/forms/ProjectForm';
+import EstimateForm from '@/components/forms/EstimateForm';
+import PaymentForm from '@/components/forms/PaymentForm';
+import ItemForm from '@/components/forms/ItemForm';
 
 const FUNCTIONS = {
   stats: 'https://functions.poehali.dev/b27021b6-5f87-44ed-9fde-234aaf974da4',
@@ -83,6 +87,11 @@ const Index = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [estimates, setEstimates] = useState<Estimate[]>([]);
+  
+  const [projectFormOpen, setProjectFormOpen] = useState(false);
+  const [estimateFormOpen, setEstimateFormOpen] = useState(false);
+  const [paymentFormOpen, setPaymentFormOpen] = useState(false);
+  const [itemFormOpen, setItemFormOpen] = useState(false);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -114,6 +123,32 @@ const Index = () => {
 
     fetchData();
   }, []);
+  
+  const handleFormSuccess = () => {
+    const fetchData = async () => {
+      try {
+        const [statsRes, projectsRes, estimatesRes, contractorsRes] = await Promise.all([
+          fetch(FUNCTIONS.stats),
+          fetch(FUNCTIONS.projects),
+          fetch(FUNCTIONS.estimates),
+          fetch(FUNCTIONS.contractors),
+        ]);
+
+        const statsData = await statsRes.json();
+        const projectsData = await projectsRes.json();
+        const estimatesData = await estimatesRes.json();
+        const contractorsData = await contractorsRes.json();
+
+        setStats(statsData);
+        setProjects(projectsData);
+        setEstimates(estimatesData);
+        setContractors(contractorsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  };
 
   const formatCurrency = (value: string | number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -351,7 +386,7 @@ const Index = () => {
                 <h2 className="text-2xl font-bold">Проекты</h2>
                 <p className="text-muted-foreground">Управление всеми проектами</p>
               </div>
-              <Button>
+              <Button onClick={() => setProjectFormOpen(true)}>
                 <Icon name="Plus" size={16} className="mr-2" />
                 Новый проект
               </Button>
@@ -407,7 +442,7 @@ const Index = () => {
                 <h2 className="text-2xl font-bold">Оценки проектов</h2>
                 <p className="text-muted-foreground">Предварительные оценки и расчеты</p>
               </div>
-              <Button>
+              <Button onClick={() => setEstimateFormOpen(true)}>
                 <Icon name="Plus" size={16} className="mr-2" />
                 Новая оценка
               </Button>
@@ -611,6 +646,27 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      <ProjectForm 
+        open={projectFormOpen} 
+        onOpenChange={setProjectFormOpen} 
+        onSuccess={handleFormSuccess} 
+      />
+      <EstimateForm 
+        open={estimateFormOpen} 
+        onOpenChange={setEstimateFormOpen} 
+        onSuccess={handleFormSuccess} 
+      />
+      <PaymentForm 
+        open={paymentFormOpen} 
+        onOpenChange={setPaymentFormOpen} 
+        onSuccess={handleFormSuccess} 
+      />
+      <ItemForm 
+        open={itemFormOpen} 
+        onOpenChange={setItemFormOpen} 
+        onSuccess={handleFormSuccess} 
+      />
     </div>
   );
 };

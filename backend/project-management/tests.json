@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "name": "Get companies",
+      "method": "GET",
+      "path": "/?action=companies",
+      "expectedStatus": 200,
+      "expectedBody": [{"id": "number", "name": "string"}],
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create project",
+      "method": "POST",
+      "path": "/?action=create-project",
+      "body": {
+        "company_id": "1",
+        "title": "Test",
+        "budget": "100000",
+        "status": "planning"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"id": "number"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
