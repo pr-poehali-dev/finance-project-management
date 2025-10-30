@@ -86,7 +86,7 @@ const PaymentForm = ({ open, onOpenChange, onSuccess, projectId }: PaymentFormPr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          contractor_id: formData.contractor_id || null,
+          contractor_id: formData.contractor_id && formData.contractor_id !== 'none' ? formData.contractor_id : null,
         }),
       });
 
@@ -182,7 +182,7 @@ const PaymentForm = ({ open, onOpenChange, onSuccess, projectId }: PaymentFormPr
                   <SelectValue placeholder="Выберите подрядчика" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Не указан</SelectItem>
+                  <SelectItem value="none">Не указан</SelectItem>
                   {contractors.map((contractor) => (
                     <SelectItem key={contractor.id} value={String(contractor.id)}>
                       {contractor.name} ({contractor.specialization})
