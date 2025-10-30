@@ -15,6 +15,7 @@ import ProjectForm from '@/components/forms/ProjectForm';
 import EstimateForm from '@/components/forms/EstimateForm';
 import PaymentForm from '@/components/forms/PaymentForm';
 import ItemForm from '@/components/forms/ItemForm';
+import ContractorForm from '@/components/forms/ContractorForm';
 
 const FUNCTIONS = {
   stats: 'https://functions.poehali.dev/b27021b6-5f87-44ed-9fde-234aaf974da4',
@@ -92,6 +93,7 @@ const Index = () => {
   const [estimateFormOpen, setEstimateFormOpen] = useState(false);
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
   const [itemFormOpen, setItemFormOpen] = useState(false);
+  const [contractorFormOpen, setContractorFormOpen] = useState(false);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -514,9 +516,9 @@ const Index = () => {
                 <h2 className="text-2xl font-bold">Подрядчики</h2>
                 <p className="text-muted-foreground">База подрядчиков и специалистов</p>
               </div>
-              <Button onClick={() => setItemFormOpen(true)}>
+              <Button onClick={() => setContractorFormOpen(true)}>
                 <Icon name="Plus" size={16} className="mr-2" />
-                Добавить услугу/товар
+                Добавить подрядчика
               </Button>
             </div>
 
@@ -676,6 +678,11 @@ const Index = () => {
       <ItemForm 
         open={itemFormOpen} 
         onOpenChange={setItemFormOpen} 
+        onSuccess={handleFormSuccess} 
+      />
+      <ContractorForm 
+        open={contractorFormOpen} 
+        onOpenChange={setContractorFormOpen} 
         onSuccess={handleFormSuccess} 
       />
     </div>

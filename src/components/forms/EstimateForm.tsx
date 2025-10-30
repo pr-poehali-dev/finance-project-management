@@ -85,9 +85,9 @@ const EstimateForm = ({ open, onOpenChange, onSuccess }: EstimateFormProps) => {
     }
   };
 
-  const updateItem = (index: number, field: keyof EstimateItem, value: number) => {
+  const updateItem = (index: number, updates: Partial<EstimateItem>) => {
     const updated = [...estimateItems];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], ...updates };
     setEstimateItems(updated);
   };
 
@@ -226,8 +226,10 @@ const EstimateForm = ({ open, onOpenChange, onSuccess }: EstimateFormProps) => {
                       onValueChange={(value) => {
                         const selectedItem = items.find((i) => i.id === Number(value));
                         if (selectedItem) {
-                          updateItem(index, 'item_id', Number(value));
-                          updateItem(index, 'unit_price', Number(selectedItem.default_price));
+                          updateItem(index, {
+                            item_id: Number(value),
+                            unit_price: Number(selectedItem.default_price)
+                          });
                         }
                       }}
                     >
@@ -249,7 +251,7 @@ const EstimateForm = ({ open, onOpenChange, onSuccess }: EstimateFormProps) => {
                     <Input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+                      onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
                       min="0.01"
                       step="0.01"
                     />
@@ -260,7 +262,7 @@ const EstimateForm = ({ open, onOpenChange, onSuccess }: EstimateFormProps) => {
                     <Input
                       type="number"
                       value={item.unit_price}
-                      onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
+                      onChange={(e) => updateItem(index, { unit_price: Number(e.target.value) })}
                       min="0"
                     />
                   </div>

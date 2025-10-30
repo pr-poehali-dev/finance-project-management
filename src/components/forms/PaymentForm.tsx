@@ -39,6 +39,7 @@ const PaymentForm = ({ open, onOpenChange, onSuccess, projectId }: PaymentFormPr
     project_id: projectId ? String(projectId) : '',
     contractor_id: '',
     type: 'income',
+    expense_type: '',
     amount: '',
     description: '',
     payment_date: new Date().toISOString().split('T')[0],
@@ -97,6 +98,7 @@ const PaymentForm = ({ open, onOpenChange, onSuccess, projectId }: PaymentFormPr
           project_id: projectId ? String(projectId) : '',
           contractor_id: '',
           type: 'income',
+          expense_type: '',
           amount: '',
           description: '',
           payment_date: new Date().toISOString().split('T')[0],
@@ -175,22 +177,61 @@ const PaymentForm = ({ open, onOpenChange, onSuccess, projectId }: PaymentFormPr
           </div>
 
           {formData.type === 'expense' && (
-            <div className="space-y-2">
-              <Label htmlFor="contractor_id">Подрядчик (опционально)</Label>
-              <Select value={formData.contractor_id} onValueChange={(value) => setFormData({ ...formData, contractor_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите подрядчика" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Не указан</SelectItem>
-                  {contractors.map((contractor) => (
-                    <SelectItem key={contractor.id} value={String(contractor.id)}>
-                      {contractor.name} ({contractor.specialization})
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="expense_type">Тип расхода</Label>
+                <Select 
+                  value={formData.expense_type} 
+                  onValueChange={(value) => setFormData({ 
+                    ...formData, 
+                    expense_type: value,
+                    contractor_id: value === 'contractor_payment' ? formData.contractor_id : ''
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите тип расхода" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="software">
+                      <div className="flex items-center gap-2">
+                        <Icon name="Laptop" size={16} />
+                        Расход на ПО
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                    <SelectItem value="contractor_payment">
+                      <div className="flex items-center gap-2">
+                        <Icon name="Users" size={16} />
+                        Выплата подрядчику
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="other">
+                      <div className="flex items-center gap-2">
+                        <Icon name="MoreHorizontal" size={16} />
+                        Другое
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.expense_type === 'contractor_payment' && (
+                <div className="space-y-2">
+                  <Label htmlFor="contractor_id">Подрядчик</Label>
+                  <Select value={formData.contractor_id} onValueChange={(value) => setFormData({ ...formData, contractor_id: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите подрядчика" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contractors.map((contractor) => (
+                        <SelectItem key={contractor.id} value={String(contractor.id)}>
+                          {contractor.name} ({contractor.specialization})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </>
           )}
 
           <div className="grid grid-cols-2 gap-4">
