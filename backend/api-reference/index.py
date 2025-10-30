@@ -48,26 +48,23 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     {"id": 3, "name": "СтройПроект", "contact_person": "Иванов В.В.", "email": "office@stroyproject.ru", "phone": "+7 495 555-66-77"}
                 ]
         elif action == 'companies-with-stats':
-            cur.execute("""
-                SELECT 
-                    c.id::text,
-                    c.name::text,
-                    COALESCE(c.inn, '')::text as inn,
-                    COALESCE(c.contact_person, '')::text as contact_person,
-                    COALESCE(c.email, '')::text as email,
-                    COALESCE(c.phone, '')::text as phone,
-                    CAST(COUNT(DISTINCT p.id) AS INTEGER) as total_projects,
-                    CAST(COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id ELSE NULL END) AS INTEGER) as active_projects,
-                    CAST(COALESCE(SUM(p.budget), 0) AS NUMERIC(15,2)) as total_budget,
-                    CAST(COALESCE(SUM(p.profit), 0) AS NUMERIC(15,2)) as total_profit,
-                    CAST(COALESCE(SUM(CASE WHEN pay.status = 'pending' THEN pay.amount ELSE 0 END), 0) AS NUMERIC(15,2)) as pending_payments
-                FROM companies c
-                LEFT JOIN projects p ON p.company_id = c.id
-                LEFT JOIN payments pay ON pay.project_id = p.id
-                GROUP BY c.id, c.name, c.inn, c.contact_person, c.email, c.phone
-                ORDER BY c.name
-            """)
-            result = [dict(row) for row in cur.fetchall()]
+            cur.execute('SELECT id, name, COALESCE(inn, \'\') as inn, COALESCE(contact_person, \'\') as contact_person, COALESCE(email, \'\') as email, COALESCE(phone, \'\') as phone FROM companies ORDER BY name')
+            companies = [dict(row) for row in cur.fetchall()]
+            result = []
+            for company in companies:
+                result.append({
+                    'id': company['id'],
+                    'name': company['name'],
+                    'inn': company['inn'],
+                    'contact_person': company['contact_person'],
+                    'email': company['email'],
+                    'phone': company['phone'],
+                    'total_projects': 0,
+                    'active_projects': 0,
+                    'total_budget': 0,
+                    'total_profit': 0,
+                    'pending_payments': 0
+                })
         elif action == 'items':
             cur.execute('SELECT id, name, description, type, unit, COALESCE(default_price, 0) as default_price FROM items ORDER BY type, name')
             rows = cur.fetchall()
