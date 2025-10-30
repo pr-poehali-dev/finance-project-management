@@ -85,11 +85,14 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
       const itemsData = await itemsRes.json();
       const contractorsData = await contractorsRes.json();
 
-      setCompanies(companiesData);
-      setItems(itemsData);
-      setContractors(contractorsData);
+      setCompanies(Array.isArray(companiesData) ? companiesData : []);
+      setItems(Array.isArray(itemsData) ? itemsData : []);
+      setContractors(Array.isArray(contractorsData) ? contractorsData : []);
     } catch (error) {
       console.error('Error loading data:', error);
+      setCompanies([]);
+      setItems([]);
+      setContractors([]);
     }
   };
 

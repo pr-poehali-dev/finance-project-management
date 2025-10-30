@@ -3,6 +3,15 @@ import os
 import psycopg2
 from typing import Dict, Any
 
+def escape_sql(value):
+    """Escape value for SQL query (simple query protocol)"""
+    if value is None:
+        return 'NULL'
+    if isinstance(value, (int, float)):
+        return str(value)
+    # Escape single quotes by doubling them
+    return f"'{str(value).replace(chr(39), chr(39)+chr(39))}'"
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
     Business: Unified API for project management (create projects, estimates, payments, get companies, items)
@@ -29,14 +38,25 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     conn = psycopg2.connect(dsn)
     cur = conn.cursor()
     
-    SCHEMA = 't_p90379979_finance_project_mana'
-    
     params = event.get('queryStringParameters', {}) or {}
     action = params.get('action', '')
     
     if method == 'GET':
+        if action == 'debug':
+            cur.execute('SELECT current_user, session_user')
+            user_info = cur.fetchone()
+            result = {'current_user': user_info[0], 'session_user': user_info[1], 'dsn': dsn}
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 200,
+                'headers': {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'},
+                'body': json.dumps(result),
+                'isBase64Encoded': False
+            }
+        
         if action == 'companies':
-            cur.execute(f'SELECT id, name, contact_person, email, phone FROM {SCHEMA}.companies ORDER BY name')
+            cur.execute('SELECT id, name, contact_person, email, phone FROM companies ORDER BY name')
             result = []
             for row in cur.fetchall():
                 result.append({
@@ -48,7 +68,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 })
         
         elif action == 'items':
-            cur.execute(f'SELECT id, name, description, type, unit, default_price FROM {SCHEMA}.items ORDER BY type, name')
+            cur.execute('SELECT id, name, description, type, unit, default_price FROM items ORDER BY type, name')
             result = []
             for row in cur.fetchall():
                 result.append({
@@ -83,81 +103,80 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         body_data = json.loads(event.get('body', '{}'))
         
         if action == 'create-project':
+            company_id = int(body_data['company_id'])
+            title = escape_sql(body_data['title'])
+            description = escape_sql(body_data.get('description', ''))
+            budget = float(body_data.get('budget', 0))
+            status = escape_sql(body_data.get('status', 'planning'))
+            start_date = escape_sql(body_data.get('start_date')) if body_data.get('start_date') else 'NULL'
+            
             cur.execute(
-                f'''INSERT INTO {SCHEMA}.projects (company_id, title, description, budget, status, start_date)
-                   VALUES (%s, %s, %s, %s, %s, %s) RETURNING id''',
-                (
-                    int(body_data['company_id']),
-                    body_data['title'],
-                    body_data.get('description', ''),
-                    float(body_data.get('budget', 0)),
-                    body_data.get('status', 'planning'),
-                    body_data.get('start_date') or None
-                )
+                f'''INSERT INTO projects (company_id, title, description, budget, status, start_date)
+                   VALUES ({company_id}, {title}, {description}, {budget}, {status}, {start_date}) RETURNING id'''
             )
             project_id = cur.fetchone()[0]
             
             if body_data.get('items'):
                 for item in body_data['items']:
+                    item_id = int(item['item_id'])
+                    quantity = float(item['quantity'])
+                    unit_price = float(item['unit_price'])
                     cur.execute(
-                        f'''INSERT INTO {SCHEMA}.project_items (project_id, item_id, quantity, unit_price)
-                           VALUES (%s, %s, %s, %s)''',
-                        (project_id, item['item_id'], float(item['quantity']), float(item['unit_price']))
+                        f'''INSERT INTO project_items (project_id, item_id, quantity, unit_price)
+                           VALUES ({project_id}, {item_id}, {quantity}, {unit_price})'''
                     )
             
             if body_data.get('contractors'):
                 for contractor in body_data['contractors']:
+                    contractor_id = int(contractor['contractor_id'])
+                    role = escape_sql(contractor['role'])
+                    hourly_rate = float(contractor['hourly_rate'])
                     cur.execute(
-                        f'''INSERT INTO {SCHEMA}.project_contractors (project_id, contractor_id, role, hourly_rate)
-                           VALUES (%s, %s, %s, %s)''',
-                        (project_id, contractor['contractor_id'], contractor['role'], float(contractor['hourly_rate']))
+                        f'''INSERT INTO project_contractors (project_id, contractor_id, role, hourly_rate)
+                           VALUES ({project_id}, {contractor_id}, {role}, {hourly_rate})'''
                     )
             
             conn.commit()
             result = {'id': project_id, 'message': 'Project created successfully'}
         
         elif action == 'create-estimate':
+            company_id = int(body_data['company_id'])
+            title = escape_sql(body_data['title'])
+            description = escape_sql(body_data.get('description', ''))
+            status = escape_sql(body_data.get('status', 'draft'))
+            estimated_hours = float(body_data.get('estimated_hours', 0))
+            
             cur.execute(
-                f'''INSERT INTO {SCHEMA}.estimates (company_id, title, description, status, estimated_hours)
-                   VALUES (%s, %s, %s, %s, %s) RETURNING id''',
-                (
-                    int(body_data['company_id']),
-                    body_data['title'],
-                    body_data.get('description', ''),
-                    body_data.get('status', 'draft'),
-                    float(body_data.get('estimated_hours', 0))
-                )
+                f'''INSERT INTO estimates (company_id, title, description, status, estimated_hours)
+                   VALUES ({company_id}, {title}, {description}, {status}, {estimated_hours}) RETURNING id'''
             )
             estimate_id = cur.fetchone()[0]
             
             if body_data.get('items'):
                 for item in body_data['items']:
+                    item_id = int(item['item_id'])
+                    quantity = float(item['quantity'])
+                    unit_price = float(item['unit_price'])
                     cur.execute(
-                        f'''INSERT INTO {SCHEMA}.estimate_items (estimate_id, item_id, quantity, unit_price)
-                           VALUES (%s, %s, %s, %s)''',
-                        (estimate_id, item['item_id'], float(item['quantity']), float(item['unit_price']))
+                        f'''INSERT INTO estimate_items (estimate_id, item_id, quantity, unit_price)
+                           VALUES ({estimate_id}, {item_id}, {quantity}, {unit_price})'''
                     )
             
             conn.commit()
             result = {'id': estimate_id, 'message': 'Estimate created successfully'}
         
         elif action == 'create-payment':
-            contractor_id = body_data.get('contractor_id')
-            if contractor_id:
-                contractor_id = int(contractor_id)
+            project_id = int(body_data['project_id'])
+            contractor_id = int(body_data['contractor_id']) if body_data.get('contractor_id') else 'NULL'
+            payment_type = escape_sql(body_data['type'])
+            amount = float(body_data['amount'])
+            description = escape_sql(body_data.get('description', ''))
+            payment_date = escape_sql(body_data['payment_date'])
+            status = escape_sql(body_data.get('status', 'pending'))
             
             cur.execute(
-                f'''INSERT INTO {SCHEMA}.payments (project_id, contractor_id, type, amount, description, payment_date, status)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id''',
-                (
-                    int(body_data['project_id']),
-                    contractor_id,
-                    body_data['type'],
-                    float(body_data['amount']),
-                    body_data.get('description', ''),
-                    body_data['payment_date'],
-                    body_data.get('status', 'pending')
-                )
+                f'''INSERT INTO payments (project_id, contractor_id, type, amount, description, payment_date, status)
+                   VALUES ({project_id}, {contractor_id}, {payment_type}, {amount}, {description}, {payment_date}, {status}) RETURNING id'''
             )
             payment_id = cur.fetchone()[0]
             
@@ -165,16 +184,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             result = {'id': payment_id, 'message': 'Payment created successfully'}
         
         elif action == 'create-item':
+            name = escape_sql(body_data['name'])
+            description = escape_sql(body_data.get('description', ''))
+            item_type = escape_sql(body_data['type'])
+            unit = escape_sql(body_data['unit'])
+            default_price = float(body_data['default_price']) if body_data.get('default_price') else 'NULL'
+            
             cur.execute(
-                f'''INSERT INTO {SCHEMA}.items (name, description, type, unit, default_price)
-                   VALUES (%s, %s, %s, %s, %s) RETURNING id''',
-                (
-                    body_data['name'],
-                    body_data.get('description', ''),
-                    body_data['type'],
-                    body_data['unit'],
-                    float(body_data.get('default_price', 0)) if body_data.get('default_price') else None
-                )
+                f'''INSERT INTO items (name, description, type, unit, default_price)
+                   VALUES ({name}, {description}, {item_type}, {unit}, {default_price}) RETURNING id'''
             )
             item_id = cur.fetchone()[0]
             
