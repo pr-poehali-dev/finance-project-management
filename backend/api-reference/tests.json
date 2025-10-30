@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Get companies list",
+      "method": "GET",
+      "path": "/?action=companies",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "type_array"
+    },
+    {
+      "name": "Get items list",
+      "method": "GET",
+      "path": "/?action=items",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "type_array"
+    }
+  ]
+}

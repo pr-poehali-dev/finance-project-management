@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const API_BASE = 'https://functions.poehali.dev/cdf95276-0ee2-4819-8a40-d619b8b8fb62';
+const API_BASE = 'https://functions.poehali.dev/3dbe8ad4-c10b-4750-bf0f-aa6da4085348';
+const ESTIMATE_API = 'https://functions.poehali.dev/cdf95276-0ee2-4819-8a40-d619b8b8fb62';
 
 interface Company {
   id: number;
@@ -66,10 +67,12 @@ const EstimateForm = ({ open, onOpenChange, onSuccess }: EstimateFormProps) => {
       const companiesData = await companiesRes.json();
       const itemsData = await itemsRes.json();
 
-      setCompanies(companiesData);
-      setItems(itemsData);
+      setCompanies(Array.isArray(companiesData) ? companiesData : []);
+      setItems(Array.isArray(itemsData) ? itemsData : []);
     } catch (error) {
       console.error('Error loading data:', error);
+      setCompanies([]);
+      setItems([]);
     }
   };
 
@@ -97,7 +100,7 @@ const EstimateForm = ({ open, onOpenChange, onSuccess }: EstimateFormProps) => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE}?action=create-estimate`, {
+      const response = await fetch(`${ESTIMATE_API}?action=create-estimate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

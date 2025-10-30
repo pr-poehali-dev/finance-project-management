@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const API_BASE = 'https://functions.poehali.dev/cdf95276-0ee2-4819-8a40-d619b8b8fb62';
+const API_BASE = 'https://functions.poehali.dev/3dbe8ad4-c10b-4750-bf0f-aa6da4085348';
+const PROJECT_API = 'https://functions.poehali.dev/cdf95276-0ee2-4819-8a40-d619b8b8fb62';
 const CONTRACTORS_API = 'https://functions.poehali.dev/850a0fed-8a2e-453d-88a4-6a527ec30caa';
 
 interface Company {
@@ -146,7 +147,7 @@ const ProjectForm = ({ open, onOpenChange, onSuccess }: ProjectFormProps) => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE}?action=create-project`, {
+      const response = await fetch(`${PROJECT_API}?action=create-project`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

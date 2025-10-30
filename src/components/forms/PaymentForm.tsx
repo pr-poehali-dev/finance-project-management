@@ -67,10 +67,12 @@ const PaymentForm = ({ open, onOpenChange, onSuccess, projectId }: PaymentFormPr
       const projectsData = await projectsRes.json();
       const contractorsData = await contractorsRes.json();
 
-      setProjects(projectsData);
-      setContractors(contractorsData);
+      setProjects(Array.isArray(projectsData) ? projectsData : []);
+      setContractors(Array.isArray(contractorsData) ? contractorsData : []);
     } catch (error) {
       console.error('Error loading data:', error);
+      setProjects([]);
+      setContractors([]);
     }
   };
 

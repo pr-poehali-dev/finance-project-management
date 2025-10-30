@@ -1,6 +1,7 @@
 import json
 import os
 import psycopg2
+from psycopg2.extras import RealDictCursor
 from typing import Dict, Any
 
 def escape_sql(value):
@@ -36,7 +37,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     dsn = os.environ.get('DATABASE_URL')
     conn = psycopg2.connect(dsn)
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
     
     params = event.get('queryStringParameters', {}) or {}
     action = params.get('action', '')
@@ -57,28 +58,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         if action == 'companies':
             cur.execute('SELECT id, name, contact_person, email, phone FROM companies ORDER BY name')
-            result = []
-            for row in cur.fetchall():
-                result.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'contact_person': row[2],
-                    'email': row[3],
-                    'phone': row[4]
-                })
+            result = [dict(row) for row in cur.fetchall()]
         
         elif action == 'items':
-            cur.execute('SELECT id, name, description, type, unit, default_price FROM items ORDER BY type, name')
+            cur.execute('SELECT id, name, description, type, unit, COALESCE(default_price, 0) as default_price FROM items ORDER BY type, name')
+            rows = cur.fetchall()
             result = []
-            for row in cur.fetchall():
-                result.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'description': row[2],
-                    'type': row[3],
-                    'unit': row[4],
-                    'default_price': str(row[5]) if row[5] else '0'
-                })
+            for row in rows:
+                row_dict = dict(row)
+                row_dict['default_price'] = str(row_dict['default_price'])
+                result.append(row_dict)
         
         else:
             cur.close()
